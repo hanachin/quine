@@ -1,1 +1,1 @@
-eval$s="require 'json';puts 'print '+('console.log('+('eval$s='+$s.inspect).inspect.to_json+')').inspect"
+eval(S="require 'json';puts 'print '+('print '+('console.log('+('eval(S='+S.inspect+')').inspect.to_json+')').inspect).inspect")
