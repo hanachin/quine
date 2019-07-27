@@ -1,1 +1,1 @@
-eval(S="require 'json';puts %(<?php\necho ) + ('print '+('print '+('console.log('+('eval(S='+S.inspect+')').inspect.to_json+')').inspect).inspect).inspect + ?;")
+eval(S="require 'json';puts %[package main\nimport \"fmt\"\nfunc main() { fmt.Println(]+(%(<?php\necho ) + ('print '+('print '+('console.log('+('eval(S='+S.inspect+')').inspect.to_json+')').inspect).inspect).inspect + %[;\n]).inspect + %[)\n}]")
