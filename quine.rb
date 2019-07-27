@@ -1,1 +1,1 @@
-eval$s="puts 'eval$s='+$s.inspect"
+eval$s="puts 'console.log('+('eval$s='+$s.inspect).inspect+')'"
