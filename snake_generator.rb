@@ -1,7 +1,17 @@
+C=File.read(__FILE__).split('AA'+'BB').last
+eval C
+exit
+
+# AABB
 require 'socket'
 
 H = 24
 W  = 80
+
+def render
+  formatted = C wo asciiaato ni kuuhaku ireru
+  puts "eval C=%(#{formatted}).join"
+end
 
 using Module.new {
   refine(Array) {
@@ -106,9 +116,11 @@ loop {
       rescue
         break
       end
+
       m.each_with_index { |r,y|
         s.print("\x1b[#{y+1};1H\x1b[K",*r)
       }
+
       !l && break
     } rescue nil
     s.close
