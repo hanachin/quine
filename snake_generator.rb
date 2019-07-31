@@ -1,19 +1,7 @@
 require 'socket'
 gs = TCPServer.open(1234)
-SB       = 250
-SE       = 240
-WILL     = 251
-DO       = 253
-IAC      = 255
-LINEMODE = 34
-LM_MODE  = 1
-ECHO     = 1
 
-IAC_DO_LINEMODE = [IAC, DO, LINEMODE].pack('c*').freeze
-IAC_SB_LINEMODE_0_IAC_SE = [IAC, SB, LINEMODE, LM_MODE, 0, IAC, SE].pack('c*').freeze
-IAC_WILL_ECHO = [IAC, WILL, ECHO].pack('c*').freeze
 
-SKIP_SIZE = 1000
 
 CSI = "\x1b["
 ERASE_ALL = '2'
@@ -141,13 +129,11 @@ loop {
     Thread.current.define_singleton_method(:body) { body }
     puts('%s is accepted' % s)
 
-    s.print(IAC_DO_LINEMODE)
-    s.print(IAC_SB_LINEMODE_0_IAC_SE)
-    s.print(IAC_WILL_ECHO)
+    s.print([255, 253, 34, 255, 250, 34, 1, 0, 255, 240, 255, 251, 1].pack('c*'))
 
     begin
       sleep 0.1
-      s.read_nonblock(SKIP_SIZE)
+      s.read_nonblock(1000)
     rescue IO::EAGAINWaitReadable
       retry
     end
