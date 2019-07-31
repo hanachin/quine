@@ -115,7 +115,7 @@ using Module.new {
       render_thread.map.each.with_index(1) { |r,y|
         move_cursor(y, 1)
         erase_line
-        print(r.join +  "\n")
+        print(r.join)
       }
     }
   }
@@ -164,7 +164,7 @@ loop {
       end
 
       s.render
-      break unless Thread.current.live
+      !Thread.current.live && break
     } rescue nil
 
     puts('%s is gone' % s)
