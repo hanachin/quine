@@ -1,18 +1,7 @@
 require 'socket'
-gs = TCPServer.open(1234)
 
-
-
-CSI = "\x1b["
-ERASE_ALL = '2'
-
-CURSOR_UP="\e[A"
-CURSOR_DOWN="\e[B"
-CURSOR_RIGHT="\e[C"
-CURSOR_LEFT="\e[D"
-
-HEIGHT = 24 - 1
-WIDTH  = 80
+H = 24
+W  = 80
 
 using Module.new {
   refine(Array) {
@@ -21,140 +10,124 @@ using Module.new {
   }
 }
 
-init_map = -> { Array.new(HEIGHT) { Array.new(WIDTH) { ' ' } } }
+im = -> { Array.new(H) { Array.new(W) { ' ' } } }
 
-threads = []
+ts = []
+fs = []
 
-def new_body_from(feeds, thread)
-  new_body = thread.body.dup
-  head = new_body.first
-  tail = new_body.pop
-  new_head =
-    case thread.direction
-    when CURSOR_UP
-      [(head.y - 1) % HEIGHT, head.x]
-    when CURSOR_DOWN
-      [(head.y + 1) % HEIGHT, head.x]
-    when CURSOR_RIGHT
-      [head.y, (head.x + 1) % WIDTH]
-    when CURSOR_LEFT
-      [head.y, (head.x - 1) % WIDTH]
+define_method(:new_body_from){|t|
+  nb = t.b.dup
+  h = nb.first
+  tail = nb.pop
+  nh =
+    case t.dir
+    when "\e[A"
+      [(h.y - 1) % H, h.x]
+    when "\e[B"
+      [(h.y + 1) % H, h.x]
+    when "\e[C"
+      [h.y, (h.x + 1) % W]
+    when "\e[D"
+      [h.y, (h.x - 1) % W]
     else
-      head
+      h
     end
-  new_body.unshift(new_head)
+  nb.unshift(nh)
 
-  if feeds.delete([new_head.y, new_head.x])
-    new_body.push(tail)
-  end
-
-  new_body
-end
+  fs.delete([nh.y, nh.x]) && nb.push(tail)
+  nb
+}
 
 
-feeds = []
-render_thread = Thread.start do
-  map = init_map.call
-
-  Thread.current.define_singleton_method(:map) { map }
-  Thread.current.define_singleton_method(:blank_point) {
+rt = Thread.start {
+  m = im.()
+  Thread.current.define_singleton_method(:m) { m }
+  Thread.current.define_singleton_method(:bp) {
     loop {
-      y = rand(1..HEIGHT)
-      x = rand(1..WIDTH)
-
-      break [y, x] if map[y][x] == ' '
+      y = rand(0...H)
+      x = rand(0...W)
+      break [y, x] if m[y][x] == ' '
     }
   }
 
-  loop do
-    new_map = init_map.call
-    threads.each do |t|
-      t.body = new_body_from(feeds, t)
-      t.body.each do |y,x|
-        new_map[y][x] = t.player
-      end
-    end
-    map = new_map
+  loop {
+    nm = im.()
+    ts.each { |t|
+      t.b = new_body_from(t)
+      t.b.each { |y,x|
+        nm[y][x] = t.player
+      }
+    }
+    m = nm
 
-    threads.each do |t|
-      threads.each do |t2|
+    ts.each { |t|
+      ts.each { |t2|
         next if t == t2
-        t.dead if t2.body.include?(t.body.first)
-      end
-    end
+        t2.b.include?(t.b.first) && t.dead
+      }
+    }
 
-    if feeds.count < 3
-      feeds << Thread.current.blank_point
-    end
+    fs.count < 3 && fs << Thread.current.bp
 
-    feeds.each { |f| map[f.y][f.x] = '@' }
-
-    sleep 0.1
-  end
-end
-
+    fs.each { |f| m[f.y][f.x] = '@' }
+    sleep(0.1)
+  }
+}
 
 using Module.new {
   refine(TCPSocket) {
-    define_method(:erase_all) { print(CSI, ERASE_ALL, 'J')}
-    define_method(:erase_line) { print CSI, 'K' }
-    define_method(:move_cursor) {|r, c| print CSI, '%d;%dH' % [r, c] }
     define_method(:render) {
-      render_thread.map.each.with_index(1) { |r,y|
-        move_cursor(y, 1)
-        erase_line
-        print(r.join)
+      rt.m.each_with_index { |r,y|
+        print("\x1b[#{y+1};1H\x1b[K",*r)
       }
     }
   }
 }
 
-player = "A"
+player = ?A
+
+gs = TCPServer.open(1234)
 
 loop {
-  threads << Thread.start(gs.accept) { |s|
+  ts << Thread.start(gs.accept) { |s|
     new_player = player
     player = player.next
     Thread.current.define_singleton_method(:player) { new_player }
     Thread.current.define_singleton_method(:s) { s }
-    direction = CURSOR_RIGHT
-    Thread.current.define_singleton_method(:direction) { direction }
+
+    dir = ""
+    Thread.current.define_singleton_method(:dir) { dir }
 
     live = true
     Thread.current.define_singleton_method(:dead) { live = false }
-    Thread.current.define_singleton_method(:live) { live }
 
-    body = [render_thread.blank_point]
-    Thread.current.define_singleton_method(:body=) {|new_body| body = new_body }
-    Thread.current.define_singleton_method(:body) { body }
-    puts('%s is accepted' % s)
+    b = [rt.bp]
+    Thread.current.define_singleton_method(:b=) {|nb| b = nb }
+    Thread.current.define_singleton_method(:b) { b }
 
     s.print([255, 253, 34, 255, 250, 34, 1, 0, 255, 240, 255, 251, 1].pack('c*'))
 
     begin
-      sleep 0.1
+      sleep(0.1)
       s.read_nonblock(1000)
     rescue IO::EAGAINWaitReadable
       retry
     end
 
-    s.erase_all
+    s.print("\x1b[2J")
 
     loop {
       begin
-        direction = s.read_nonblock(3)
+        dir = s.read_nonblock(3)
       rescue IO::EAGAINWaitReadable
         nil
       rescue EOFError
         break
       end
-
       s.render
-      !Thread.current.live && break
+      !live && break
     } rescue nil
-
-    puts('%s is gone' % s)
     s.close
-    threads.delete(Thread.current)
+    ts.delete(Thread.current)
   }
 }
