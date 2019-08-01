@@ -13,24 +13,12 @@ H,W=24,80
 #   puts "eval C=%w(#{formatted}).join"
 # end
 
-using Module.new{
-  refine(Array){
-    define_method(:y){first}
-    define_method(:x){last}
-  }
-}
-
-m,ts,fs=nil,[],[]
-
-dm={"\e[A"=>->y,x{[(y-1)%H,x]},"\e[B"=>->y,x{[(y+1)%H,x]},"\e[C"=>->y,x{[y,(x+1)%W]},"\e[D"=>->y,x{[y,(x-1)%W]}}
-bp=->{
-  loop{
-    x,y=rand(W),rand(H)
-    return[y,x]if m[y][x]==' '
-  }
-}
-
-rt=Thread.start{
+using Module.new{refine(Array){define_method(:y){first};define_method(:x){last}}};
+m,ts,fs=nil,[],[];
+dm,bp,rt=
+      {"\e[A"=>->y,x{[(y-1)%H,x]},"\e[B"=>->y,x{[(y+1)%H,x]},"\e[C"=>->y,x{[y,(x+1)%W]},"\e[D"=>->y,x{[y,(x-1)%W]}},
+->{loop{x,y=rand(W),rand(H);return[y,x]if m[y][x]==' '}},
+Thread.start{
   loop{
     nm=Array.new(H){Array.new(W){' '}}
     ts.each{|t|
@@ -80,7 +68,6 @@ gs=TCPServer.open(1234)
 loop{
   ts<<Thread.start(gs.accept){|s|
     q,d,l,b,p=p,"",true,[bp.()],p.next
-
     fn=Thread.current.:define_singleton_method
     fn.(:p){q}
     fn.(:d){d}
@@ -95,16 +82,7 @@ loop{
       fs.delete(nh)&&nb.push(e)
       b=nb
     }
-
     s.print([255,253,34,255,250,34,1,0,255,240,255,251,1].pack('c*'),"\x1b[2J\x1b[?12l")
-
-    begin
-      sleep(0.1)
-      s.read_nonblock(999)
-    rescue IO::EAGAINWaitReadable
-      retry
-    end
-
     loop{
       begin
         d=s.read_nonblock(3)
