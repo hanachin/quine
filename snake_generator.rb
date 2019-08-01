@@ -1,17 +1,17 @@
-C=File.read(__FILE__).split('AA'+'BB').last
-eval C
-exit
+C=File.read(__FILE__).split('AA'+'BB').last.gsub(/ +/, ' ').gsub(/^ +/, '')
+# eval C
+# exit
 
 # AABB
 require 'socket'
 
-H = 24
-W  = 80
+H = 80
+W  = 24
 
-def render
-  formatted = C wo asciiaato ni kuuhaku ireru
-  puts "eval C=%(#{formatted}).join"
-end
+# def render
+#   formatted = C wo asciiaato ni kuuhaku ireru
+#   puts "eval C=%w(#{formatted}).join"
+# end
 
 using Module.new {
   refine(Array) {
@@ -20,9 +20,7 @@ using Module.new {
   }
 }
 
-im = -> { Array.new(H) { Array.new(W) { ' ' } } }
-m = im.()
-
+m = nil
 ts = []
 fs = []
 
@@ -58,7 +56,7 @@ rt = Thread.start {
   }
 
   loop {
-    nm = im.()
+    nm = Array.new(H) { Array.new(W) { ' ' } }
     ts.each { |t|
       t.b = new_body_from(t)
       t.b.each { |y,x|
@@ -73,10 +71,35 @@ rt = Thread.start {
       }
     }
 
-    fs.size < 3 && fs << Thread.current.bp
-
+    fs.size < 10 && fs << Thread.current.bp
     fs.each { m[@1][@2] = '@' }
-    sleep(0.1)
+
+    ci = 0
+    m2 = Array.new(H*8) { Array.new(W*8) { ' ' } }
+    m.each_with_index { |r, y|
+      r.each_with_index { |c, x|
+        if c == '@'
+          8.times { |yi|
+            ci+=8
+            m2[y*8+yi][x..x+8] = C[ci-8..ci]
+          }
+        elsif c == ' '
+          8.times { |yi|
+            m2[y*8+yi][x...x+8] = ' ' * 8
+          }
+        else
+          8.times { |yi|
+            m2[y*8+yi][x...x+8] = (c * 6).inspect
+          }
+        end
+      }
+    }
+
+    m2.each_with_index { |r,y|
+      $stdout.print("\x1b[#{y+1};1H\x1b[K",*r)
+    }
+
+    sleep(1)
   }
 }
 
@@ -99,11 +122,11 @@ loop {
     fn.(:b=) {|nb| b = nb }
     fn.(:b) { b }
 
-    s.print([255, 253, 34, 255, 250, 34, 1, 0, 255, 240, 255, 251, 1].pack('c*'),"\x1b[2J")
+    s.print([255, 253, 34, 255, 250, 34, 1, 0, 255, 240, 255, 251, 1].pack('c*'),"\x1b[2J\x1b[?12l")
 
     begin
       sleep(0.1)
-      s.read_nonblock(1000)
+      s.read_nonblock(999)
     rescue IO::EAGAINWaitReadable
       retry
     end
@@ -123,7 +146,7 @@ loop {
 
       !l && break
     } rescue nil
-    s.close
+    s.close;
     ts.delete(Thread.current)
   }
 }
