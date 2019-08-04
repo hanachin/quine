@@ -15,4 +15,4 @@ en(1234);begin;loop{ts<<T.startxx               xx(gs.accept){|s|q,d,l,b=(p=p.xx
 te(nh)&&nb.push(e);b=nbxxxxxprint([255,253xxxxxxxxxxsx,34,255,250,34,1,0,255,240
 pack('c*'),"\x1b[2J\x1b[?12lxxxxxxxxxxxxxxxxxxxx");loop{begin;d=s.read_nonblock(
 WaitReadable;rescue;xxxxxxxxxxxxxxxxxxxxxxxxbreak;end;s.print(m.map.with_index{|
-K"+r.join}.join);l||break}rescue(1);s.close;ts.delete(T.current)}};rescue Interr
+K"+r.join}.join);l||break}rescue(1);s.close;ts.delete(T.current)}};rescueInterrx
